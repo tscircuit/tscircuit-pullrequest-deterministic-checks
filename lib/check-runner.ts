@@ -3,6 +3,7 @@ import { join } from "node:path"
 import { astChecks } from "./checks/ast-checks"
 import { diffLineChecks } from "./checks/diff-line-checks"
 import { handbookLineChecks } from "./checks/handbook-line-checks"
+import { packageJsonChecks } from "./checks/package-json-checks"
 import { prBodyChecks } from "./checks/pr-body-checks"
 import { ciWorkflowChecks } from "./checks/ci-workflow-checks"
 import { repoToolingChecks } from "./checks/repo-tooling-checks"
@@ -22,6 +23,7 @@ export const allChecks: Check[] = [
   ...ciWorkflowChecks,
   ...handbookLineChecks,
   ...diffLineChecks,
+  ...packageJsonChecks,
   ...astChecks,
   ...prBodyChecks,
 ]
