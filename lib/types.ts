@@ -19,6 +19,8 @@ export interface AddedLine {
 export interface ChangedFile {
   filePath: string
   status: "added" | "modified" | "deleted" | "renamed"
+  /** For renames: the path before the rename */
+  previousFilePath?: string
   addedLines: AddedLine[]
   removedLines: string[]
 }

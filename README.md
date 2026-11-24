@@ -26,7 +26,7 @@ bun "$CHECKER_REPO/lib/cli/check.ts" --pr tscircuit/pcb-viewer#1228 --local
 bun "$CHECKER_REPO/lib/cli/check.ts" --groups repo,diff --checks handbook/,deps/ --json
 ```
 
-`--pr` accepts a GitHub URL, `owner/repo#number`, or a bare number from within that repo. GitHub commands use an authenticated `gh` CLI. The checker exits with code 1 when it finds an error. A `pre-existing:` warning means the repo-level finding refers to a file outside the change. The first finding for a check includes the review quote when available.
+`--pr` accepts a GitHub URL, `owner/repo#number`, or a bare number from within that repo. GitHub commands use an authenticated `gh` CLI. The checker exits with code 1 when it finds an error. A `pre-existing:` warning means the repo-level finding refers to a file or directory the change didn't touch. `--checks` filters findings by check ID prefix (e.g. `deps/` keeps `deps/no-url-deps` and `deps/unneeded-bumps`). If GitHub truncates a very large repository's file tree, `--pr` stops with an error rather than silently skipping files; run the checker in a local clone instead. The first finding for a check includes the review quote when available.
 
 The package also exposes the `tscircuit-pullrequest-deterministic-checks` command when installed into a Bun project. To audit which checks fire across several PRs, run `bun "$CHECKER_REPO/lib/cli/audit.ts" --author @me --since 2026-11-14`. The audit also accepts `--repo`, `--limit`, and `--concurrency`.
 
@@ -53,7 +53,7 @@ The API also exports `allChecks`, `runChecks(source, options)`, `createPrSource`
 
 ## Cache rules
 
-The default cache directory is `~/.cache/tscircuit-pullrequest-deterministic-checks/v1`. Set `PULLREQUEST_DETERMINISTIC_CHECKS_CACHE_DIR` to override it or `PULLREQUEST_DETERMINISTIC_CHECKS_NO_CACHE=1` to disable disk caching.
+The default cache directory is `~/.cache/tscircuit-pullrequest-deterministic-checks/v2`. Set `PULLREQUEST_DETERMINISTIC_CHECKS_CACHE_DIR` to override it or `PULLREQUEST_DETERMINISTIC_CHECKS_NO_CACHE=1` to disable disk caching.
 
 - Diffs are cached by base and head commit, and file trees and contents by commit.
 - AST results are cached by content hash. Repository and diff findings are cached by revision, selected checks, and a hash of the checker source.

@@ -1,5 +1,11 @@
 import { createHash } from "node:crypto"
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  writeFileSync,
+} from "node:fs"
 import { homedir } from "node:os"
 import { join } from "node:path"
 
@@ -10,16 +16,14 @@ import { join } from "node:path"
  *
  * Bump CACHE_VERSION when a cached computation changes shape.
  */
-const CACHE_VERSION = "v1"
+const CACHE_VERSION = "v2"
 
-export const cacheDir =
+/** Versioned even under a custom directory, so a bump discards old entries everywhere. */
+export const cacheDir = join(
   process.env.PULLREQUEST_DETERMINISTIC_CHECKS_CACHE_DIR ??
-  join(
-    homedir(),
-    ".cache",
-    "tscircuit-pullrequest-deterministic-checks",
-    CACHE_VERSION,
-  )
+    join(homedir(), ".cache", "tscircuit-pullrequest-deterministic-checks"),
+  CACHE_VERSION,
+)
 
 const isCacheDisabled =
   process.env.PULLREQUEST_DETERMINISTIC_CHECKS_NO_CACHE === "1"
@@ -39,13 +43,24 @@ interface CacheEntry<T> {
   payload: T
 }
 
+function readEntry<T>(entryPath: string): CacheEntry<T> | null {
+  if (isCacheDisabled || !existsSync(entryPath)) return null
+  try {
+    return JSON.parse(readFileSync(entryPath, "utf8")) as CacheEntry<T>
+  } catch {
+    // a corrupt entry (e.g. from an interrupted write) is just a cache miss
+    return null
+  }
+}
+
 export async function cached<T>(
   params: { cacheKey: string; ttlMs?: number },
   compute: () => Promise<T>,
 ): Promise<T> {
   const entryPath = getEntryPath(params.cacheKey)
-  if (!isCacheDisabled && existsSync(entryPath)) {
-    const entry = JSON.parse(readFileSync(entryPath, "utf8")) as CacheEntry<T>
+  const entry = readEntry<T>(entryPath)
+  // an entry without a payload (hand-edited or truncated) is a miss, not a result
+  if (entry && entry.payload !== undefined && entry.payload !== null) {
     const isFresh =
       params.ttlMs === undefined || Date.now() - entry.storedAtMs < params.ttlMs
     if (entry.cacheKey === params.cacheKey && isFresh) return entry.payload
@@ -53,12 +68,15 @@ export async function cached<T>(
   const payload = await compute()
   if (!isCacheDisabled) {
     mkdirSync(join(entryPath, ".."), { recursive: true })
-    const entry: CacheEntry<T> = {
+    const newEntry: CacheEntry<T> = {
       cacheKey: params.cacheKey,
       storedAtMs: Date.now(),
       payload,
     }
-    writeFileSync(entryPath, JSON.stringify(entry))
+    // write then rename, so readers never see a half-written entry
+    const temporaryPath = `${entryPath}.${process.pid}.${Date.now()}.tmp`
+    writeFileSync(temporaryPath, JSON.stringify(newEntry))
+    renameSync(temporaryPath, entryPath)
   }
   return payload
 }

@@ -68,6 +68,7 @@ test("uses the destination path and records added, deleted, and renamed files", 
     {
       filePath: "new-name.ts",
       status: "renamed",
+      previousFilePath: "old-name.ts",
       addedLines: [],
       removedLines: [],
     },

@@ -4,14 +4,22 @@ import { astChecks } from "./checks/ast-checks"
 import { diffLineChecks } from "./checks/diff-line-checks"
 import { handbookLineChecks } from "./checks/handbook-line-checks"
 import { prBodyChecks } from "./checks/pr-body-checks"
+import { ciWorkflowChecks } from "./checks/ci-workflow-checks"
 import { repoToolingChecks } from "./checks/repo-tooling-checks"
 import { createLocalSource } from "./sources/local-source"
 import { createPrSource, fetchPrMetadata } from "./sources/pr-source"
-import type { Check, CheckContext, CheckSource, Finding } from "./types"
+import type {
+  ChangedFile,
+  Check,
+  CheckContext,
+  CheckSource,
+  Finding,
+} from "./types"
 import { cached, hashText } from "./utils/cache"
 
 export const allChecks: Check[] = [
   ...repoToolingChecks,
+  ...ciWorkflowChecks,
   ...handbookLineChecks,
   ...diffLineChecks,
   ...astChecks,
@@ -47,18 +55,46 @@ export interface CheckReport {
 export interface CheckOptions {
   /** Only run these groups (default: all) */
   groups?: Check["group"][]
-  /** Only run checks whose id starts with one of these prefixes */
+  /** Only report findings whose check id starts with one of these prefixes */
   checkIdPrefixes?: string[]
 }
 
 function selectChecks(options: CheckOptions): Check[] {
   return allChecks.filter(
-    (check) =>
-      (!options.groups || options.groups.includes(check.group)) &&
-      (!options.checkIdPrefixes ||
-        options.checkIdPrefixes.some((prefix) =>
-          check.checkId.startsWith(prefix),
-        )),
+    (check) => !options.groups || options.groups.includes(check.group),
+  )
+}
+
+/** One check can emit several ids (e.g. "deps" emits "deps/no-url-deps"), so filter findings, not checks. */
+function isSelectedFinding(params: {
+  finding: Finding
+  options: CheckOptions
+}): boolean {
+  const { checkIdPrefixes } = params.options
+  return (
+    !checkIdPrefixes ||
+    checkIdPrefixes.some((prefix) => params.finding.checkId.startsWith(prefix))
+  )
+}
+
+/**
+ * A finding on a file belongs to a PR that changed that file. A finding on a
+ * directory (e.g. "no workflow runs bun test" on ".github/workflows") belongs
+ * to a PR that deleted a file from it or renamed one out of it; merely editing
+ * another file there doesn't make an existing gap this PR's fault.
+ */
+function isTouchedByChange(params: {
+  filePath: string
+  changedFiles: ChangedFile[]
+}): boolean {
+  const directoryPrefix = `${params.filePath}/`
+  return params.changedFiles.some(
+    (changedFile) =>
+      changedFile.filePath === params.filePath ||
+      (changedFile.status === "deleted" &&
+        changedFile.filePath.startsWith(directoryPrefix)) ||
+      (changedFile.status === "renamed" &&
+        (changedFile.previousFilePath ?? "").startsWith(directoryPrefix)),
   )
 }
 
@@ -102,9 +138,6 @@ export async function runChecks(
     },
     () => runCheckList({ checks: codeChecks, ctx }),
   )
-  const changedFilePaths = new Set(
-    ctx.changedFiles.map((changedFile) => changedFile.filePath),
-  )
   const repoCheckIds = new Set(
     checks
       .filter((check) => check.group === "repo")
@@ -115,7 +148,10 @@ export async function runChecks(
   const attributedCodeFindings = codeFindings.map((finding) =>
     repoCheckIds.has(finding.checkId) &&
     finding.filePath &&
-    !changedFilePaths.has(finding.filePath)
+    !isTouchedByChange({
+      filePath: finding.filePath,
+      changedFiles: ctx.changedFiles,
+    })
       ? {
           ...finding,
           level: "warn" as const,
@@ -123,10 +159,12 @@ export async function runChecks(
         }
       : finding,
   )
-  const findings = sortFindings([
-    ...attributedCodeFindings,
-    ...(await runCheckList({ checks: prChecks, ctx })),
-  ])
+  const findings = sortFindings(
+    [
+      ...attributedCodeFindings,
+      ...(await runCheckList({ checks: prChecks, ctx })),
+    ].filter((finding) => isSelectedFinding({ finding, options })),
+  )
   return {
     revisionKey: source.revisionKey,
     repoFullName: source.repoFullName,

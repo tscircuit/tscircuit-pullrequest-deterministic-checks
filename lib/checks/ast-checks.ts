@@ -4,7 +4,7 @@ import { cached, hashText } from "../utils/cache"
 import { isCheckedCodeFile } from "../utils/line-check-helpers"
 
 /** Bump when the AST rules change so cached results are recomputed. */
-const AST_RULES_VERSION = "1"
+const AST_RULES_VERSION = "2"
 
 interface AstViolation {
   checkId:
@@ -12,6 +12,8 @@ interface AstViolation {
     | "handbook/no-named-closures"
     | "handbook/entrypoint-pollution"
   line: number
+  /** Last line of the signature: a change anywhere in it counts as touching it */
+  signatureEndLine: number
   message: string
 }
 
@@ -70,6 +72,19 @@ interface AstWalkContext {
   violations: AstViolation[]
 }
 
+/** A function's signature runs from its start to the opening of its body. */
+function getSignatureEndLine(
+  node: FunctionLikeNode,
+  ctx: AstWalkContext,
+): number {
+  const signatureEnd = ts.isArrowFunction(node)
+    ? node.equalsGreaterThanToken.getStart(ctx.sourceFile)
+    : node.body
+      ? node.body.getStart(ctx.sourceFile)
+      : node.end
+  return ctx.sourceFile.getLineAndCharacterOfPosition(signatureEnd).line + 1
+}
+
 function getLine(node: ts.Node, ctx: AstWalkContext): number {
   return (
     ctx.sourceFile.getLineAndCharacterOfPosition(node.getStart(ctx.sourceFile))
@@ -83,6 +98,7 @@ function checkFunctionNode(node: FunctionLikeNode, ctx: AstWalkContext) {
     ctx.violations.push({
       checkId: "handbook/two-parameter-rule",
       line: getLine(node, ctx),
+      signatureEndLine: getSignatureEndLine(node, ctx),
       message: `${functionName}() takes ${node.parameters.length} params; use one named-params object, or (params, ctx)`,
     })
   }
@@ -101,6 +117,7 @@ function checkFunctionNode(node: FunctionLikeNode, ctx: AstWalkContext) {
   ctx.violations.push({
     checkId: "handbook/no-named-closures",
     line: getLine(node, ctx),
+    signatureEndLine: getSignatureEndLine(node, ctx),
     message: `${functionName}() is a named closure inside ${enclosingName}(); hoist it to module scope`,
   })
 }
@@ -148,6 +165,7 @@ function findAstViolations(params: {
       ctx.violations.push({
         checkId: "handbook/entrypoint-pollution",
         line: 1,
+        signatureEndLine: 1,
         message: `entrypoint defines ${topLevelFunctionCount} functions; move implementations to sibling modules and import them`,
       })
     }
@@ -161,7 +179,8 @@ function getCachedAstViolations(params: {
 }): Promise<AstViolation[]> {
   return cached(
     {
-      cacheKey: `ast:${AST_RULES_VERSION}:${params.filePath.endsWith("x")}:${/index\.tsx?$/.test(params.filePath)}:${hashText(params.content)}`,
+      // the rules depend on the path (tsx, test file, index), not only the content
+      cacheKey: `ast:${AST_RULES_VERSION}:${params.filePath}:${hashText(params.content)}`,
     },
     async () => findAstViolations(params),
   )
@@ -184,8 +203,8 @@ const astHandbookChecks: Check = {
         continue
       const content = await ctx.source.readFile(changedFile.filePath)
       if (!content) continue
-      const addedLineNumbers = new Set(
-        changedFile.addedLines.map((addedLine) => addedLine.line),
+      const addedLineNumbers = changedFile.addedLines.map(
+        (addedLine) => addedLine.line,
       )
       const violations = await getCachedAstViolations({
         filePath: changedFile.filePath,
@@ -194,7 +213,12 @@ const astHandbookChecks: Check = {
       for (const violation of violations) {
         const isEntrypointRule =
           violation.checkId === "handbook/entrypoint-pollution"
-        if (!isEntrypointRule && !addedLineNumbers.has(violation.line)) continue
+        const touchesSignature = addedLineNumbers.some(
+          (lineNumber) =>
+            lineNumber >= violation.line &&
+            lineNumber <= violation.signatureEndLine,
+        )
+        if (!isEntrypointRule && !touchesSignature) continue
         findings.push({
           checkId: violation.checkId,
           level: isEntrypointRule ? "warn" : "error",

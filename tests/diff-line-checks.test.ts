@@ -18,12 +18,21 @@ test("flags URL dependencies, manual circuit-json filtering, CI-skipped tests an
     "diff --git a/package.json b/package.json",
     "--- a/package.json",
     "+++ b/package.json",
-    "@@ -1,1 +1,1 @@",
+    "@@ -1,0 +1,1 @@",
     '+    "phase-skew": "https://github.com/x/y/releases/download/v1/y-1.tgz",',
   ].join("\n")
   const checkIds = await getCheckIds(
     createMemorySource({
-      files: { ...plopRepoFiles, "tests/sim.test.ts": testCode },
+      files: {
+        ...plopRepoFiles,
+        "package.json": JSON.stringify({
+          ...JSON.parse(plopRepoFiles["package.json"]),
+          dependencies: {
+            "phase-skew": "https://github.com/x/y/releases/download/v1/y-1.tgz",
+          },
+        }),
+        "tests/sim.test.ts": testCode,
+      },
       diffText,
     }),
   )

@@ -52,7 +52,17 @@ export async function createLocalSource(
     await runCommand(["git", "merge-base", "HEAD", baseRef], { cwd: repoDir })
   ).trim()
   const diffText = await runCommand(
-    ["git", "diff", "--no-color", "--no-ext-diff", mergeBaseSha],
+    [
+      "git",
+      "-c",
+      "core.quotePath=false",
+      "diff",
+      "--no-color",
+      "--no-ext-diff",
+      "--src-prefix=a/",
+      "--dst-prefix=b/",
+      mergeBaseSha,
+    ],
     { cwd: repoDir },
   )
   const untrackedPaths = (
