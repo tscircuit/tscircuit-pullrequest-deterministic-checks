@@ -5,6 +5,7 @@
   "module": "lib/index.ts",
   "files": ["lib"],
   "scripts": {
+    "check": "bun lib/cli/check.ts",
     "format": "biome format --write .",
     "format:check": "biome format ."
   },

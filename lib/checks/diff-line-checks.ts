@@ -45,7 +45,8 @@ const testsMustRunInCi = createLinePatternCheck({
   checkId: "tests/must-run-in-ci",
   level: "error",
   pattern:
-    /\b(test|it|describe)\.(skip|skipIf|if|todo)\b|\bexistsSync\(|process\.env\.(?!BUN_UPDATE_SNAPSHOTS)\w+/,
+    // a skip, or a condition that can skip test code; `expect(existsSync(x))` is fine
+    /\b(test|it|describe)\.(skip|skipIf|if|todo)\b|\bif\s*\(.*(\bexistsSync\(|process\.env\.(?!BUN_UPDATE_SNAPSHOTS)\w+)/,
   appliesToFile: (filePath) => TEST_FILE_PATTERN.test(filePath),
   message:
     "conditional/skipped test: it may silently not run in CI (missing models/files/env)",
@@ -113,6 +114,32 @@ function getDependencyVersions(lines: string[]): Map<PackageName, string> {
   return versionsByName
 }
 
+const DEPENDENCY_SECTION_NAMES = [
+  "dependencies",
+  "devDependencies",
+  "peerDependencies",
+  "optionalDependencies",
+] as const
+
+/** Versions declared in a package.json's dependency sections (not scripts, bin, etc). */
+function getDeclaredDependencyVersions(
+  packageJsonText: string | null,
+): Map<PackageName, string> | null {
+  if (!packageJsonText) return null
+  try {
+    const packageJson = JSON.parse(packageJsonText) as Partial<
+      Record<(typeof DEPENDENCY_SECTION_NAMES)[number], Record<string, string>>
+    >
+    return new Map(
+      DEPENDENCY_SECTION_NAMES.flatMap((sectionName) =>
+        Object.entries(packageJson[sectionName] ?? {}),
+      ),
+    )
+  } catch {
+    return null
+  }
+}
+
 const dependencyChanges: Check = {
   checkId: "deps",
   group: "diff",
@@ -126,9 +153,23 @@ const dependencyChanges: Check = {
       )
         continue
       const oldVersions = getDependencyVersions(changedFile.removedLines)
-      const newVersions = getDependencyVersions(
+      const addedVersions = getDependencyVersions(
         changedFile.addedLines.map((addedLine: AddedLine) => addedLine.text),
       )
+      const declaredVersions = changedFile.filePath.endsWith("package.json")
+        ? getDeclaredDependencyVersions(
+            await ctx.source.readFile(changedFile.filePath),
+          )
+        : null
+      // only lines that really are dependency declarations in the new package.json
+      const newVersions = declaredVersions
+        ? new Map(
+            [...addedVersions].filter(
+              ([packageName, version]) =>
+                declaredVersions.get(packageName) === version,
+            ),
+          )
+        : addedVersions
       for (const [packageName, newVersion] of newVersions) {
         const oldVersion = oldVersions.get(packageName)
         if (oldVersion === newVersion) continue

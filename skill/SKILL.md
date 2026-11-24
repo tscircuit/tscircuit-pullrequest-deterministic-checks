@@ -81,7 +81,7 @@ The API also exports `allChecks`, `runChecks(source)`, `createPrSource`, `create
 
 ### Cache rules
 
-- Location: `~/.cache/tscircuit-pullrequest-deterministic-checks/v1` (`PULLREQUEST_DETERMINISTIC_CHECKS_CACHE_DIR` overrides; `PULLREQUEST_DETERMINISTIC_CHECKS_NO_CACHE=1` disables).
+- Location: `~/.cache/tscircuit-pullrequest-deterministic-checks/v2` (`PULLREQUEST_DETERMINISTIC_CHECKS_CACHE_DIR` overrides; `PULLREQUEST_DETERMINISTIC_CHECKS_NO_CACHE=1` disables).
 - Cached forever: diff by base+head sha, file tree and file contents by commit sha, AST results by content hash, whole-run findings by revision + a hash of the checks' own source. Editing any check invalidates its results automatically.
 - Short TTL (2 min): PR title, body, and comments, which are mutable. PR-body checks always rerun.
 

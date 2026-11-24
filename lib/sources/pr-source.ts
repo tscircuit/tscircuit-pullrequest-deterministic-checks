@@ -25,11 +25,18 @@ function toGhPrArgs(prRef: string): string[] {
   return [prRef]
 }
 
+/** A bare PR number resolves against the current repo, so it must be cached per directory. */
+function getPrMetadataCacheKey(prRef: string): string {
+  return /^\d+$/.test(prRef)
+    ? `pr-view:${process.cwd()}:${prRef}`
+    : `pr-view:${prRef}`
+}
+
 export async function fetchPrMetadata(
   prRef: string,
 ): Promise<PrMetadata & { headRepoFullName: string }> {
   const prView = await cached(
-    { cacheKey: `pr-view:${prRef}`, ttlMs: PR_METADATA_TTL_MS },
+    { cacheKey: getPrMetadataCacheKey(prRef), ttlMs: PR_METADATA_TTL_MS },
     async () =>
       JSON.parse(
         await runCommand([
@@ -78,7 +85,13 @@ function listFilesAtCommit(commitRef: CommitRef): Promise<string[]> {
           "api",
           `repos/${commitRef.repoFullName}/git/trees/${commitRef.sha}?recursive=1`,
         ]),
-      ) as { tree: { path: string; type: string }[] }
+      ) as { truncated?: boolean; tree: { path: string; type: string }[] }
+      if (tree.truncated) {
+        // a partial tree would silently skip checks, so refuse instead of caching it
+        throw new Error(
+          `GitHub truncated the file tree of ${commitRef.repoFullName}@${commitRef.sha}; check a local clone instead (run without --pr, or with --local)`,
+        )
+      }
       return tree.tree
         .filter((entry) => entry.type === "blob")
         .map((entry) => entry.path)
@@ -120,15 +133,15 @@ export async function createPrSource(
   // atSha replays the PR as it was at an earlier push (e.g. when a review comment was left)
   const headSha = options.atSha ?? pr.headSha
 
+  // Always diff the exact commits: the live pull request endpoint can already
+  // show a newer push, which must never be cached under this headSha.
   const diffText = await cached(
     { cacheKey: `pr-diff:${pr.repoFullName}:${baseSha}:${headSha}` },
     () =>
       runCommand([
         "gh",
         "api",
-        options.atSha
-          ? `repos/${headRepoFullName}/compare/${baseSha}...${headSha}`
-          : `repos/${pr.repoFullName}/pulls/${pr.number}`,
+        `repos/${headRepoFullName}/compare/${baseSha}...${headSha}`,
         "-H",
         "Accept: application/vnd.github.diff",
       ]),

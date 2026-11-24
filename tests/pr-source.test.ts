@@ -71,68 +71,59 @@ const sharedResponses = [
 ]
 installFakeGh(sharedResponses)
 
-test.failing(
-  "a bare PR number is scoped to the repository it is run from",
-  async () => {
-    // `gh pr view 41` resolves against the current repo, so emulate that with --repo
-    const firstSource = await createPrSource("tscircuit/first-repo#41")
-    expect(firstSource.repoFullName).toBe("tscircuit/first-repo")
+test("a bare PR number is scoped to the repository it is run from", async () => {
+  // `gh pr view 41` resolves against the current repo, so emulate that with --repo
+  const firstSource = await createPrSource("tscircuit/first-repo#41")
+  expect(firstSource.repoFullName).toBe("tscircuit/first-repo")
 
-    const originalCwd = process.cwd()
-    const otherRepoDir = mkdtempSync(join(tmpdir(), "other-repo-"))
-    process.chdir(otherRepoDir)
-    try {
-      installFakeGh([
-        {
-          argsInclude: ["pr view 41"],
-          stdout: createGhPrView({
-            repoFullName: "tscircuit/second-repo",
-            number: 41,
-            headSha: "second41",
-          }),
-        },
-        emptyDiffResponse,
-        emptyPullDiffResponse,
-      ])
-      const bareFromOtherRepo = await createPrSource("41")
-      process.chdir(originalCwd)
-      installFakeGh([
-        {
-          argsInclude: ["pr view 41"],
-          stdout: createGhPrView({
-            repoFullName: "tscircuit/first-repo",
-            number: 41,
-            headSha: "first41",
-          }),
-        },
-        emptyDiffResponse,
-        emptyPullDiffResponse,
-      ])
-      const bareFromFirstRepo = await createPrSource("41")
-      expect(bareFromOtherRepo.repoFullName).toBe("tscircuit/second-repo")
-      expect(bareFromFirstRepo.repoFullName).toBe("tscircuit/first-repo")
-    } finally {
-      process.chdir(originalCwd)
-      installFakeGh(sharedResponses)
-    }
-  },
-)
-
-test.failing(
-  "the diff is fetched for the exact head commit, not the live PR",
-  async () => {
-    const source = await createPrSource("tscircuit/pushed-repo#42")
-    const changedFiles = await source.getChangedFiles()
-    expect(changedFiles.map((changedFile) => changedFile.filePath)).toEqual([
-      "lib/from-first-push.ts",
+  const originalCwd = process.cwd()
+  const otherRepoDir = mkdtempSync(join(tmpdir(), "other-repo-"))
+  process.chdir(otherRepoDir)
+  try {
+    installFakeGh([
+      {
+        argsInclude: ["pr view 41"],
+        stdout: createGhPrView({
+          repoFullName: "tscircuit/second-repo",
+          number: 41,
+          headSha: "second41",
+        }),
+      },
+      emptyDiffResponse,
+      emptyPullDiffResponse,
     ])
-  },
-)
+    const bareFromOtherRepo = await createPrSource("41")
+    process.chdir(originalCwd)
+    installFakeGh([
+      {
+        argsInclude: ["pr view 41"],
+        stdout: createGhPrView({
+          repoFullName: "tscircuit/first-repo",
+          number: 41,
+          headSha: "first41",
+        }),
+      },
+      emptyDiffResponse,
+      emptyPullDiffResponse,
+    ])
+    const bareFromFirstRepo = await createPrSource("41")
+    expect(bareFromOtherRepo.repoFullName).toBe("tscircuit/second-repo")
+    expect(bareFromFirstRepo.repoFullName).toBe("tscircuit/first-repo")
+  } finally {
+    process.chdir(originalCwd)
+    installFakeGh(sharedResponses)
+  }
+})
 
-test.failing(
-  "a truncated GitHub tree fails loudly instead of skipping files",
-  async () => {
-    const source = await createPrSource("tscircuit/huge-repo#43")
-    await expect(source.listFiles()).rejects.toThrow(/truncated/)
-  },
-)
+test("the diff is fetched for the exact head commit, not the live PR", async () => {
+  const source = await createPrSource("tscircuit/pushed-repo#42")
+  const changedFiles = await source.getChangedFiles()
+  expect(changedFiles.map((changedFile) => changedFile.filePath)).toEqual([
+    "lib/from-first-push.ts",
+  ])
+})
+
+test("a truncated GitHub tree fails loudly instead of skipping files", async () => {
+  const source = await createPrSource("tscircuit/huge-repo#43")
+  await expect(source.listFiles()).rejects.toThrow(/truncated/)
+})
