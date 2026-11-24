@@ -30,6 +30,14 @@ bun "$CHECKER_REPO/lib/cli/check.ts" --groups repo,diff --checks handbook/,deps/
 
 The package also exposes the `tscircuit-pullrequest-deterministic-checks` command when installed into a Bun project. To audit which checks fire across several PRs, run `bun "$CHECKER_REPO/lib/cli/audit.ts" --author @me --since 2026-11-14`. The audit also accepts `--repo`, `--limit`, and `--concurrency`.
 
+## Shared types in Circuit JSON
+
+`schema/redeclared-shared-shape` warns when a new or edited top-level TypeScript type or Zod object in `src/` matches the shape of an unchanged export from `src/common/`. It reports the matching name, file and line. This intentionally checks only simple object shapes; a Zod match compares output fields, not accepted inputs or validation rules. Verify constraints before replacing a schema. The rule runs only when the target repository is `tscircuit/circuit-json`.
+
+```sh
+bun "$CHECKER_REPO/lib/cli/check.ts" --pr tscircuit/circuit-json#1051 --at b0795e215e11b2a4bd040dd2e4773e6809fc550d --checks schema/
+```
+
 ## Code-mode API
 
 Import the API from `lib/index.ts` in a clone, or from the package after adding it to a Bun project with `bun add github:tscircuit/tscircuit-pullrequest-deterministic-checks`.

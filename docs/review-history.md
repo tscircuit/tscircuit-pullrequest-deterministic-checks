@@ -23,6 +23,7 @@ Recurring comments from ShiboSoftwareDev and seveibar on @0hmX's tscircuit PRs, 
 | `pr/reference-comparison` | "you gotta have a reference from a working tool to compare to … put a side by side comparison to a real working reference" | pcb-viewer#1229, circuit-to-canvas#327, circuit-json-webgpu#116 |
 | `pr/title-claims` | "this is not end to end like the title says" | signal-integrity-pipeline#143 |
 | `tests/repro-as-tsx` | "this repro is really bad. There is no showing of the desired feature, just random shapes." | circuit-json-webgpu#114 |
+| `schema/redeclared-shared-shape` | "why redefine point?" (Shibo) | [circuit-json#1051](https://github.com/tscircuit/circuit-json/pull/1051#discussion_r4686538651) |
 
 ## Not automatable (judgment)
 

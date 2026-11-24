@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 import { astChecks } from "./checks/ast-checks"
+import { sharedShapeChecks } from "./checks/shared-shape-checks"
 import { diffLineChecks } from "./checks/diff-line-checks"
 import { handbookLineChecks } from "./checks/handbook-line-checks"
 import { packageJsonChecks } from "./checks/package-json-checks"
@@ -25,6 +26,7 @@ export const allChecks: Check[] = [
   ...diffLineChecks,
   ...packageJsonChecks,
   ...astChecks,
+  ...sharedShapeChecks,
   ...prBodyChecks,
 ]
 
