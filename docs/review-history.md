@@ -14,6 +14,7 @@ Recurring comments from ShiboSoftwareDev and seveibar on @0hmX's tscircuit PRs, 
 | `circuit-json/no-local-element-types` | "drop the pre-existing local pcb_hole override and use circuit-json directly" / "use the existing port and net ID types" | signal-integrity-pipeline#125, #116 |
 | `imports/use-tscircuit-package` | "we import the tscircuit package, we stopped importing individual packages because they introduce technical debt and dependency conflicts" | signal-integrity-pipeline#115 |
 | `deps/no-url-deps` | "we don't do this" / "don't do this" (on a GitHub-release .tgz dependency) | circuit-to-canvas#327, circuit-json-webgpu#116 |
+| `deps/package-json-one-line` | Team rule, from the same "this adds noise" feedback: a PR changes at most one line of any existing `package.json` (a version bump counts as one); split other dependency changes into their own PRs | circuit-json-webgpu#116, circuit-to-canvas#327 |
 | `deps/unneeded-bumps` | "why did you bump circuit-json when you don't need to update types for this PR? this adds noise" | circuit-json-webgpu#116 |
 | `tests/must-run-in-ci` | "the models are not available as far as I can tell, this won't run on ci" | signal-integrity-pipeline#143, #117 |
 | `comments/ai-artifacts`, `comments/density`, `pr/no-ai-review-paste` | "what's the purpose of these comments? you gotta write them manually, I don't want your AI review for your AI, you gotta validate what it's saying" / "these comments don't help unless you wrote them" | circuit-to-canvas#327, circuit-json-webgpu#116, signal-integrity-pipeline#117 |

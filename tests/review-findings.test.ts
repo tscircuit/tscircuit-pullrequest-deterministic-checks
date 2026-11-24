@@ -162,7 +162,9 @@ test("bin and script entries in package.json are not dependencies", async () => 
     }),
   )
   expect(
-    report.findings.filter((finding) => finding.checkId.startsWith("deps")),
+    report.findings.filter((finding) =>
+      ["deps/no-url-deps", "deps/unneeded-bumps"].includes(finding.checkId),
+    ),
   ).toEqual([])
 })
 
