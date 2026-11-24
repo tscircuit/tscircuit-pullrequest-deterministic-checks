@@ -63,7 +63,7 @@ test("skips different types, optional properties and unknown Zod transforms", as
       'import { z } from "zod"',
       "type Different = { x: string; y: number }",
       "interface PartialPoint { x: number; y?: number }",
-      'const transformed = z.object({ x: z.number().transform(String), y: z.number() })',
+      "const transformed = z.object({ x: z.number().transform(String), y: z.number() })",
       "const fromAnotherLibrary = other.object({ x: z.number(), y: z.number() })",
     ].join("\n"),
   })

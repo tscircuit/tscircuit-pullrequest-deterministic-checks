@@ -39,7 +39,8 @@ function getSchemaImports(file: ts.SourceFile): SchemaImports {
     if (!ts.isStringLiteral(statement.moduleSpecifier)) continue
     const clause = statement.importClause
     const bindings = clause?.namedBindings
-    if (clause?.isTypeOnly || !bindings || !ts.isNamedImports(bindings)) continue
+    if (clause?.isTypeOnly || !bindings || !ts.isNamedImports(bindings))
+      continue
     const moduleName = statement.moduleSpecifier.text
     for (const element of bindings.elements) {
       if (element.isTypeOnly) continue
@@ -104,7 +105,8 @@ function schemaField(params: {
     if (!outputPreservingChecks.has(name.text)) return
     value = receiver
   }
-  if (ts.isIdentifier(value) && imports.distance.has(value.text)) return "number"
+  if (ts.isIdentifier(value) && imports.distance.has(value.text))
+    return "number"
 }
 
 function schemaShape(params: {
@@ -135,7 +137,10 @@ function schemaShape(params: {
   return fingerprint(fields)
 }
 
-function declarations(params: { path: string; content: string }): Declaration[] {
+function declarations(params: {
+  path: string
+  content: string
+}): Declaration[] {
   const file = ts.createSourceFile(
     params.path,
     params.content,
@@ -146,16 +151,21 @@ function declarations(params: { path: string; content: string }): Declaration[] 
   const result: Declaration[] = []
   for (const statement of file.statements) {
     const exported = ts.canHaveModifiers(statement)
-      ? (ts.getModifiers(statement)?.some(
-          (modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword,
-        ) ?? false)
+      ? (ts
+          .getModifiers(statement)
+          ?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword) ??
+        false)
       : false
     const line =
       file.getLineAndCharacterOfPosition(statement.getStart(file)).line + 1
-    const endLine = file.getLineAndCharacterOfPosition(statement.getEnd()).line + 1
+    const endLine =
+      file.getLineAndCharacterOfPosition(statement.getEnd()).line + 1
     const location = { path: params.path, line, endLine, exported }
     if (ts.isInterfaceDeclaration(statement)) {
-      if (statement.typeParameters?.length || statement.heritageClauses?.length) {
+      if (
+        statement.typeParameters?.length ||
+        statement.heritageClauses?.length
+      ) {
         continue
       }
       const shape = typeShape(statement.members)
@@ -248,7 +258,8 @@ const sharedShapeCheck: Check = {
 
     const references: Declaration[] = []
     for (const path of [...ctx.allFiles].sort()) {
-      if (!/^src\/common\/.*\.ts$/.test(path) || path.endsWith(".d.ts")) continue
+      if (!/^src\/common\/.*\.ts$/.test(path) || path.endsWith(".d.ts"))
+        continue
       let shapes = shapesByPath.get(path)
       if (!shapes) {
         const content = await ctx.source.readFile(path)
