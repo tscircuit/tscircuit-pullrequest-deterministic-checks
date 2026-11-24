@@ -77,7 +77,11 @@ function getSignatureEndLine(
   node: FunctionLikeNode,
   ctx: AstWalkContext,
 ): number {
-  const signatureEnd = node.body ? node.body.getStart(ctx.sourceFile) : node.end
+  const signatureEnd = ts.isArrowFunction(node)
+    ? node.equalsGreaterThanToken.getStart(ctx.sourceFile)
+    : node.body
+      ? node.body.getStart(ctx.sourceFile)
+      : node.end
   return ctx.sourceFile.getLineAndCharacterOfPosition(signatureEnd).line + 1
 }
 

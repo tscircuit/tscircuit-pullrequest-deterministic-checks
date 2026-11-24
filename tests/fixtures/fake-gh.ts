@@ -5,6 +5,8 @@ import { join } from "node:path"
 export interface FakeGhResponse {
   /** Every one of these must appear in the space-joined gh arguments */
   argsInclude: string[]
+  /** Optional environment the call must run with, e.g. { GH_REPO: "owner/repo" } */
+  env?: Record<string, string>
   stdout: string
 }
 
@@ -26,8 +28,12 @@ export function installFakeGh(responses: FakeGhResponse[]): void {
     `#!/usr/bin/env bun
 const responses = await Bun.file(${JSON.stringify(responsesPath)}).json()
 const joinedArgs = process.argv.slice(2).join(" ")
-const response = responses.find((candidate) =>
-  candidate.argsInclude.every((part) => joinedArgs.includes(part)),
+const response = responses.find(
+  (candidate) =>
+    candidate.argsInclude.every((part) => joinedArgs.includes(part)) &&
+    Object.entries(candidate.env ?? {}).every(
+      ([name, expected]) => process.env[name] === expected,
+    ),
 )
 if (!response) {
   console.error("fake gh: no response for " + joinedArgs)

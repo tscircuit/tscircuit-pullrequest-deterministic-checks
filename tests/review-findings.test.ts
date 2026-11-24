@@ -19,7 +19,8 @@ test("parses quoted (non-ASCII) paths and `++` lines inside a hunk", () => {
       '+++ "b/lib/caf\\303\\251.ts"',
       "@@ -0,0 +1,3 @@",
       "+let counter = 0",
-      "++ counter",
+      // the added line "++ counter" appears in the raw diff as "+++ counter"
+      "+++ counter",
       "+export const seen = new Map<string, number>()",
     ].join("\n"),
   )
@@ -139,15 +140,16 @@ test("bin and script entries in package.json are not dependencies", async () => 
   const packageJson = {
     ...JSON.parse(plopRepoFiles["package.json"]),
     bin: { "my-cli": "lib/cli/check.ts" },
-    scripts: { check: "bun file:./cli.ts" },
+    scripts: { check: "file:./cli.ts" },
   }
   const diffText = [
     "diff --git a/package.json b/package.json",
     "--- a/package.json",
     "+++ b/package.json",
-    "@@ -1,1 +1,3 @@",
+    "@@ -1,1 +1,4 @@",
     " {",
-    '+  "bin": { "my-cli": "lib/cli/check.ts" },',
+    '+  "bin": {',
+    '+    "my-cli": "lib/cli/check.ts"',
     '+    "check": "file:./cli.ts",',
   ].join("\n")
   const report = await runChecks(

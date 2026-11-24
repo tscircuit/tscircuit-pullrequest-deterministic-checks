@@ -18,14 +18,12 @@ import { join } from "node:path"
  */
 const CACHE_VERSION = "v2"
 
-export const cacheDir =
+/** Versioned even under a custom directory, so a bump discards old entries everywhere. */
+export const cacheDir = join(
   process.env.PULLREQUEST_DETERMINISTIC_CHECKS_CACHE_DIR ??
-  join(
-    homedir(),
-    ".cache",
-    "tscircuit-pullrequest-deterministic-checks",
-    CACHE_VERSION,
-  )
+    join(homedir(), ".cache", "tscircuit-pullrequest-deterministic-checks"),
+  CACHE_VERSION,
+)
 
 const isCacheDisabled =
   process.env.PULLREQUEST_DETERMINISTIC_CHECKS_NO_CACHE === "1"
@@ -61,7 +59,8 @@ export async function cached<T>(
 ): Promise<T> {
   const entryPath = getEntryPath(params.cacheKey)
   const entry = readEntry<T>(entryPath)
-  if (entry) {
+  // an entry without a payload (hand-edited or truncated) is a miss, not a result
+  if (entry && entry.payload !== undefined && entry.payload !== null) {
     const isFresh =
       params.ttlMs === undefined || Date.now() - entry.storedAtMs < params.ttlMs
     if (entry.cacheKey === params.cacheKey && isFresh) return entry.payload

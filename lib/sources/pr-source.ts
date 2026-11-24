@@ -25,11 +25,15 @@ function toGhPrArgs(prRef: string): string[] {
   return [prRef]
 }
 
-/** A bare PR number resolves against the current repo, so it must be cached per directory. */
+/**
+ * A bare PR number resolves against the current repo (the directory, or the
+ * GH_REPO / GH_HOST overrides), so its cache key must include all of them.
+ */
 function getPrMetadataCacheKey(prRef: string): string {
-  return /^\d+$/.test(prRef)
-    ? `pr-view:${process.cwd()}:${prRef}`
-    : `pr-view:${prRef}`
+  if (!/^\d+$/.test(prRef)) return `pr-view:${prRef}`
+  const ghRepo = process.env.GH_REPO ?? ""
+  const ghHost = process.env.GH_HOST ?? ""
+  return `pr-view:${process.cwd()}:${ghHost}:${ghRepo}:${prRef}`
 }
 
 export async function fetchPrMetadata(

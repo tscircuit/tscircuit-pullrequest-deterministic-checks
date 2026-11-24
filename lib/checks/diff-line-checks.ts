@@ -45,8 +45,9 @@ const testsMustRunInCi = createLinePatternCheck({
   checkId: "tests/must-run-in-ci",
   level: "error",
   pattern:
-    // a skip, or a condition that can skip test code; `expect(existsSync(x))` is fine
-    /\b(test|it|describe)\.(skip|skipIf|if|todo)\b|\bif\s*\(.*(\bexistsSync\(|process\.env\.(?!BUN_UPDATE_SNAPSHOTS)\w+)/,
+    // a skip, or a file/env condition that can skip test code (`if`, `&&`, `?`, `return`).
+    // Lines that assert or throw on it (`expect(existsSync(x))`, `if (!x) throw`) make the test fail, which is fine.
+    /^(?!.*\b(throw|expect)\b).*(\b(test|it|describe)\.(skip|skipIf|if|todo)\b|(\bif\b|&&|\?|\breturn\b).*(\bexistsSync\(|process\.env\.(?!BUN_UPDATE_SNAPSHOTS)\w+)|(\bexistsSync\(|process\.env\.(?!BUN_UPDATE_SNAPSHOTS)\w+).*(&&|\?))/,
   appliesToFile: (filePath) => TEST_FILE_PATTERN.test(filePath),
   message:
     "conditional/skipped test: it may silently not run in CI (missing models/files/env)",
@@ -121,18 +122,23 @@ const DEPENDENCY_SECTION_NAMES = [
   "optionalDependencies",
 ] as const
 
-/** Versions declared in a package.json's dependency sections (not scripts, bin, etc). */
-function getDeclaredDependencyVersions(
+type DependencyDeclaration = string
+
+/** "name@version" for every entry in a package.json's dependency sections (not scripts, bin, etc). */
+function getDeclaredDependencies(
   packageJsonText: string | null,
-): Map<PackageName, string> | null {
+): Set<DependencyDeclaration> | null {
   if (!packageJsonText) return null
   try {
     const packageJson = JSON.parse(packageJsonText) as Partial<
       Record<(typeof DEPENDENCY_SECTION_NAMES)[number], Record<string, string>>
     >
-    return new Map(
+    // a name can appear in several sections with different versions, so keep every pair
+    return new Set(
       DEPENDENCY_SECTION_NAMES.flatMap((sectionName) =>
-        Object.entries(packageJson[sectionName] ?? {}),
+        Object.entries(packageJson[sectionName] ?? {}).map(
+          ([packageName, version]) => `${packageName}@${version}`,
+        ),
       ),
     )
   } catch {
@@ -156,17 +162,16 @@ const dependencyChanges: Check = {
       const addedVersions = getDependencyVersions(
         changedFile.addedLines.map((addedLine: AddedLine) => addedLine.text),
       )
-      const declaredVersions = changedFile.filePath.endsWith("package.json")
-        ? getDeclaredDependencyVersions(
+      const declaredDependencies = changedFile.filePath.endsWith("package.json")
+        ? getDeclaredDependencies(
             await ctx.source.readFile(changedFile.filePath),
           )
         : null
       // only lines that really are dependency declarations in the new package.json
-      const newVersions = declaredVersions
+      const newVersions = declaredDependencies
         ? new Map(
-            [...addedVersions].filter(
-              ([packageName, version]) =>
-                declaredVersions.get(packageName) === version,
+            [...addedVersions].filter(([packageName, version]) =>
+              declaredDependencies.has(`${packageName}@${version}`),
             ),
           )
         : addedVersions

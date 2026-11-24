@@ -17,18 +17,20 @@ export function unquoteGitPath(rawPath: string): string {
   if (!rawPath.startsWith('"') || !rawPath.endsWith('"')) return rawPath
   const quotedBody = rawPath.slice(1, -1)
   const pathBytes: number[] = []
-  for (let index = 0; index < quotedBody.length; index++) {
-    const character = quotedBody[index]!
+  // iterate by code point so characters outside the BMP (e.g. emoji) stay intact
+  const characters = Array.from(quotedBody)
+  for (let index = 0; index < characters.length; index++) {
+    const character = characters[index]!
     if (character !== "\\") {
       pathBytes.push(...new TextEncoder().encode(character))
       continue
     }
-    const octalDigits = quotedBody.slice(index + 1, index + 4)
+    const octalDigits = characters.slice(index + 1, index + 4).join("")
     if (/^[0-7]{3}$/.test(octalDigits)) {
       pathBytes.push(Number.parseInt(octalDigits, 8))
       index += 3
     } else {
-      const escapedCharacter = quotedBody[index + 1] ?? ""
+      const escapedCharacter = characters[index + 1] ?? ""
       pathBytes.push(
         C_ESCAPES[escapedCharacter] ?? escapedCharacter.charCodeAt(0),
       )
@@ -50,6 +52,10 @@ function getPathFromDiffGitLine(diffGitLine: string): string {
   const pathPair = diffGitLine.slice("diff --git ".length)
   const quotedMatch = pathPair.match(/ ("b\/.*")$/)
   if (quotedMatch) return getPathFromFileHeader(quotedMatch[1]!) ?? ""
+  // without a rename both sides are the same path, which disambiguates names containing " b/"
+  const halfLength = (pathPair.length - " ".length) / 2
+  const samePath = pathPair.slice("a/".length, halfLength)
+  if (pathPair === `a/${samePath} b/${samePath}`) return samePath
   const plainMatch = pathPair.match(/^a\/(.+) b\/(.+)$/)
   return plainMatch?.[2] ?? ""
 }
@@ -79,10 +85,12 @@ export function parseUnifiedDiff(diffText: string): ChangedFile[] {
   let current: ChangedFile | null = null
   let hunk: HunkState | null = null
 
-  for (const rawLine of diffText.split("\n")) {
+  for (const diffLine of diffText.split("\n")) {
+    // CRLF only matters for headers; hunk content keeps its \r
     const isInsideHunk =
       hunk !== null &&
       (hunk.remainingOldLines > 0 || hunk.remainingNewLines > 0)
+    const rawLine = isInsideHunk ? diffLine : diffLine.replace(/\r$/, "")
     if (current && hunk && isInsideHunk) {
       if (rawLine.startsWith("+")) {
         current.addedLines.push({
@@ -116,8 +124,14 @@ export function parseUnifiedDiff(diffText: string): ChangedFile[] {
     if (rawLine.startsWith("@@")) hunk = parseHunkHeader(rawLine)
     else if (rawLine.startsWith("new file mode")) current.status = "added"
     else if (rawLine.startsWith("deleted file mode")) current.status = "deleted"
-    else if (rawLine.startsWith("rename to ")) current.status = "renamed"
-    else if (rawLine.startsWith("+++ ")) {
+    else if (rawLine.startsWith("rename from ")) {
+      current.previousFilePath = unquoteGitPath(
+        rawLine.slice("rename from ".length),
+      )
+    } else if (rawLine.startsWith("rename to ")) {
+      current.status = "renamed"
+      current.filePath = unquoteGitPath(rawLine.slice("rename to ".length))
+    } else if (rawLine.startsWith("+++ ")) {
       current.filePath =
         getPathFromFileHeader(rawLine.slice(4)) ?? current.filePath
     } else if (rawLine.startsWith("--- ") && current.filePath === "") {
