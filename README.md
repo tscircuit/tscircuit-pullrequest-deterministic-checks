@@ -38,6 +38,14 @@ The package also exposes the `tscircuit-pullrequest-deterministic-checks` comman
 bun "$CHECKER_REPO/lib/cli/check.ts" --pr tscircuit/circuit-json#1051 --at b0795e215e11b2a4bd040dd2e4773e6809fc550d --checks schema/
 ```
 
+## Measurement units in Circuit JSON
+
+`schema/missing-measurement-unit` warns on added numeric property names for a small dictionary of measurements, such as skew, delay, voltage and frequency. It checks TypeScript `number` properties and direct Zod `number()` fields in `src/` of `tscircuit/circuit-json`. It does not infer the unit from a name: a length skew may be expressed in mm, while a timing skew may be in ps. Use the unit the field actually stores.
+
+```sh
+bun "$CHECKER_REPO/lib/cli/check.ts" --pr tscircuit/circuit-json#1051 --at fdaee2d6e817e24e378a40be4fdd3545510d08a4 --checks schema/missing-measurement-unit
+```
+
 ## Code-mode API
 
 Import the API from `lib/index.ts` in a clone, or from the package after adding it to a Bun project with `bun add github:tscircuit/tscircuit-pullrequest-deterministic-checks`.
@@ -64,7 +72,7 @@ The API also exports `allChecks`, `runChecks(source, options)`, `createPrSource`
 The default cache directory is `~/.cache/tscircuit-pullrequest-deterministic-checks/v2`. Set `PULLREQUEST_DETERMINISTIC_CHECKS_CACHE_DIR` to override it or `PULLREQUEST_DETERMINISTIC_CHECKS_NO_CACHE=1` to disable disk caching.
 
 - Diffs are cached by base and head commit, and file trees and contents by commit.
-- AST results are cached by content hash. Repository and diff findings are cached by revision, selected checks, and a hash of the checker source.
+- AST results are cached by content hash. Repository and diff findings are cached by revision, repository, selected checks, and a hash of the checker source.
 - PR titles, bodies, and comments are cached for two minutes. PR-body checks rerun on every invocation.
 
 ## Adding a check
