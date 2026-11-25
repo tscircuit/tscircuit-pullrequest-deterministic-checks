@@ -46,6 +46,14 @@ bun "$CHECKER_REPO/lib/cli/check.ts" --pr tscircuit/circuit-json#1051 --at b0795
 bun "$CHECKER_REPO/lib/cli/check.ts" --pr tscircuit/circuit-json#1051 --at fdaee2d6e817e24e378a40be4fdd3545510d08a4 --checks schema/missing-measurement-unit
 ```
 
+## Core subcircuit inflators
+
+`core/no-new-inflator-components` is an error only in `tscircuit/core`. It flags a new `PrimitiveComponent` subclass declared in the subcircuit inflators, not ordinary Core components or edits to existing inflator bodies. Use a shared restoration step when data must wait for parent IDs. The existing `InflatedSimulation` is grandfathered in.
+
+```sh
+bun "$CHECKER_REPO/lib/cli/check.ts" --pr tscircuit/core#5888 --at c9abe2fd452126d1ed34d181c262f8e21d553d18 --checks core/no-new-inflator-components
+```
+
 ## Code-mode API
 
 Import the API from `lib/index.ts` in a clone, or from the package after adding it to a Bun project with `bun add github:tscircuit/tscircuit-pullrequest-deterministic-checks`.
