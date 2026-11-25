@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 import { astChecks } from "./checks/ast-checks"
+import { measurementUnitChecks } from "./checks/measurement-unit-checks"
 import { sharedShapeChecks } from "./checks/shared-shape-checks"
 import { diffLineChecks } from "./checks/diff-line-checks"
 import { handbookLineChecks } from "./checks/handbook-line-checks"
@@ -27,6 +28,7 @@ export const allChecks: Check[] = [
   ...packageJsonChecks,
   ...astChecks,
   ...sharedShapeChecks,
+  ...measurementUnitChecks,
   ...prBodyChecks,
 ]
 
@@ -134,11 +136,16 @@ export async function runChecks(
   }
   const codeChecks = checks.filter((check) => check.group !== "pr")
   const prChecks = checks.filter((check) => check.group === "pr")
-  // repo/diff results depend only on the revision + rule source: cache them.
+  // Some diff rules are scoped by repository, including for a local checkout with PR metadata.
+  const repositoryScope = JSON.stringify([
+    source.repoFullName?.toLowerCase(),
+    source.pr?.repoFullName.toLowerCase(),
+  ])
+  // repo/diff results depend on the revision, repository and rule source: cache them.
   // PR-body checks depend on mutable metadata, so they always rerun (they are cheap).
   const codeFindings = await cached(
     {
-      cacheKey: `findings:${checksSourceHash}:${source.revisionKey}:${codeChecks.map((check) => check.checkId).join(",")}`,
+      cacheKey: `findings:${checksSourceHash}:${repositoryScope}:${source.revisionKey}:${codeChecks.map((check) => check.checkId).join(",")}`,
     },
     () => runCheckList({ checks: codeChecks, ctx }),
   )

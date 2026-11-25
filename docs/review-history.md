@@ -24,6 +24,7 @@ Recurring comments from ShiboSoftwareDev and seveibar on @0hmX's tscircuit PRs, 
 | `pr/title-claims` | "this is not end to end like the title says" | signal-integrity-pipeline#143 |
 | `tests/repro-as-tsx` | "this repro is really bad. There is no showing of the desired feature, just random shapes." | circuit-json-webgpu#114 |
 | `schema/redeclared-shared-shape` | "why redefine point?" (Shibo) | [circuit-json#1051](https://github.com/tscircuit/circuit-json/pull/1051#discussion_r4686538651) |
+| `schema/missing-measurement-unit` | "unit of skew?" (Seve) | [circuit-json#1051](https://github.com/tscircuit/circuit-json/pull/1051#discussion_r4687055859) |
 
 ## Not automatable (judgment)
 
