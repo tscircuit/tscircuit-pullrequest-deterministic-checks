@@ -28,6 +28,7 @@ export interface ChangedFile {
 export interface PrMetadata {
   url: string
   repoFullName: string
+  headRepoFullName?: string
   number: number
   title: string
   body: string

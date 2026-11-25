@@ -34,8 +34,7 @@ test("visual repo PR without an embedded image fails; with one it passes", async
   )
   expect(
     withImage.findings.some(
-      (finding) =>
-        finding.checkId === "pr/visual-evidence" && finding.level === "error",
+      (finding) => finding.checkId === "pr/visual-evidence",
     ),
   ).toBe(false)
 })
