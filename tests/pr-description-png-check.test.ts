@@ -108,3 +108,34 @@ test("exempts an unchanged Playwright test's own screenshot directory", async ()
   })
   expect(report.findings).toEqual([])
 })
+
+test("exempts PNGs read by a named snapshot helper but not generated output", async () => {
+  const testFile = "tests/phase-skew.test.ts"
+  const testCode = [
+    'import { expectPhaseSkewSnapshot as assertPng } from "./fixtures/phase-skew/render"',
+    'await assertPng({ name: "forum-joints", frame })',
+    'await assertPng({ name: "forum-hover", frame })',
+  ].join("\n")
+  const added = [
+    "tests/snapshots/phase-skew/forum-joints.png",
+    "tests/snapshots/phase-skew/forum-hover.png",
+    "tests/actual/phase-skew/forum-hover.png",
+  ]
+  const report = await checkPngs({
+    files: {
+      [testFile]: testCode,
+      "tests/fixtures/phase-skew/render.ts": [
+        "export async function expectPhaseSkewSnapshot({ name, frame }) {",
+        "  const baseline = new URL(`../../snapshots/phase-skew/${name}.png`, import.meta.url)",
+        "  const actual = new URL(`../../actual/phase-skew/${name}.png`, import.meta.url)",
+        "  compare(await Bun.file(baseline).arrayBuffer(), frame)",
+        "  await Bun.write(actual, frame)",
+        "}",
+      ].join("\n"),
+    },
+    added,
+    extraDiff: addedFileDiff(testFile, testCode),
+    body: added.map((path) => `![image](${path})`).join("\n"),
+  })
+  expect(report.findings.map(({ filePath }) => filePath)).toEqual([added[2]])
+})

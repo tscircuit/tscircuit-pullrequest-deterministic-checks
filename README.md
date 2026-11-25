@@ -60,7 +60,7 @@ bun "$CHECKER_REPO/lib/cli/check.ts" --pr tscircuit/core#5888 --at c9abe2fd45212
 
 ## PR description screenshots
 
-`pr/description-only-png` warns when a newly committed PNG is linked from the PR description and no test reference is found. Attach demo-only screenshots directly to the PR rather than committing them. PR attachments still count as visual evidence. Real test assets are exempt when the checker finds a static path in changed JS/TS test code, a matching nearby test, or a conventional Playwright screenshot directory with a screenshot assertion. It does not infer arbitrary generated paths or search every unchanged test. The warning does not block CI.
+`pr/description-only-png` warns when a newly committed PNG is linked from the PR description and no test reference is found. Attach demo-only screenshots directly to the PR rather than committing them. PR attachments still count as visual evidence. Real test assets are exempt when the checker finds a static path in changed JS/TS test code, a matching nearby test, or a conventional Playwright screenshot directory with a screenshot assertion. It can also follow a named snapshot helper in one relative import when the helper reads a PNG URL formed from one literal argument. It does not infer arbitrary generated paths or search every unchanged test. The warning does not block CI.
 
 ## Code-mode API
 

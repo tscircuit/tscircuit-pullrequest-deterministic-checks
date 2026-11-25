@@ -1,6 +1,7 @@
 import { posix } from "node:path"
 import ts from "typescript"
 import type { Check, CheckContext, PrMetadata } from "../types"
+import { findNamedPngSnapshots } from "../utils/named-png-snapshots"
 
 const TEST_PATH = /(?:^|\/)(?:tests?|__tests__|e2e)\/|\.(?:test|spec)\.[^.]+$/
 const JS_EXTENSION = /\.[cm]?[jt]sx?$/i
@@ -90,12 +91,11 @@ function isRelevantTest(params: {
 }
 
 function removeTestImages(params: {
-  testFile: string
-  contents: string
+  parsed: ts.SourceFile
   images: Set<string>
 }) {
-  const { testFile, contents, images } = params
-  const parsed = ts.createSourceFile(testFile, contents, ts.ScriptTarget.Latest)
+  const { parsed, images } = params
+  const testFile = parsed.fileName
   function removePath(path: string) {
     if (!PNG_EXTENSION.test(path)) return
     images.delete(posix.join(posix.dirname(testFile), path))
@@ -160,11 +160,25 @@ export const prDescriptionPngCheck: Check = {
     )
     // Bound concurrent GitHub content requests; skip reads once all candidates
     // are accounted for. Binary file contents are never required.
+    const allFiles = new Set(ctx.allFiles)
     for (let index = 0; index < tests.length && images.size; index += 8) {
       await Promise.all(
         tests.slice(index, index + 8).map(async (testFile) => {
           const contents = await ctx.source.readFile(testFile)
-          if (contents) removeTestImages({ testFile, contents, images })
+          if (!contents) return
+          const parsed = ts.createSourceFile(
+            testFile,
+            contents,
+            ts.ScriptTarget.Latest,
+          )
+          removeTestImages({ parsed, images })
+          if (!images.size) return
+          const snapshots = await findNamedPngSnapshots({
+            test: parsed,
+            source: ctx.source,
+            allFiles,
+          })
+          for (const snapshot of snapshots) images.delete(snapshot)
         }),
       )
     }
