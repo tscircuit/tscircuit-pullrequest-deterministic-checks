@@ -1,4 +1,5 @@
 import type { Check, CheckContext, Finding } from "../types"
+import { prDescriptionPngCheck } from "./pr-description-png-check"
 
 /** Repos whose output is a picture; reviewers expect to see it. */
 const VISUAL_REPOS = new Set([
@@ -46,7 +47,7 @@ const visualEvidence: Check = {
       VISUAL_REPOS.has(getRepoName(ctx)) &&
       ctx.changedFiles.some((changedFile) => isSourceFile(changedFile.filePath))
     const hasImage = IMAGE_PATTERN.test(pr.body)
-    if (touchesRenderingCode && snapshotChanges.length === 0) {
+    if (touchesRenderingCode && snapshotChanges.length === 0 && !hasImage) {
       findings.push({
         checkId: this.checkId,
         level: "warn",
@@ -179,6 +180,7 @@ const titleClaims: Check = {
 
 export const prBodyChecks: Check[] = [
   visualEvidence,
+  prDescriptionPngCheck,
   rendererOrder,
   referenceComparison,
   noAiReviewPaste,

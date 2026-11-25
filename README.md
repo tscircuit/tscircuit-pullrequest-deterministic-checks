@@ -58,6 +58,10 @@ bun "$CHECKER_REPO/lib/cli/check.ts" --pr tscircuit/core#5888 --at c9abe2fd45212
 
 `handbook/review-undefined-signature` is an advisory warning across repositories when added TypeScript function annotations explicitly accept or return `undefined`. It covers direct types, unions, inline parameter object fields, and `Promise<T | undefined>`. It does not flag plain `?` optional parameters, standalone stored-data types, inferred types, or untouched annotation lines. Expected absence (such as a lookup miss) can be correct; prefer a required input when the caller can handle absence, or a distinct error when the operation actually failed.
 
+## PR description screenshots
+
+`pr/description-only-png` warns when a newly committed PNG is linked from the PR description and no test reference is found. Attach demo-only screenshots directly to the PR rather than committing them. PR attachments still count as visual evidence. Real test assets are exempt when the checker finds a static path in changed JS/TS test code, a matching nearby test, or a conventional Playwright screenshot directory with a screenshot assertion. It can also follow a named snapshot helper in one relative import when the helper reads a PNG URL formed from one literal argument. It does not infer arbitrary generated paths or search every unchanged test. The warning does not block CI.
+
 ## Code-mode API
 
 Import the API from `lib/index.ts` in a clone, or from the package after adding it to a Bun project with `bun add github:tscircuit/tscircuit-pullrequest-deterministic-checks`.
