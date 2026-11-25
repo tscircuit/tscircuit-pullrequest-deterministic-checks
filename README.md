@@ -54,7 +54,9 @@ bun "$CHECKER_REPO/lib/cli/check.ts" --pr tscircuit/circuit-json#1051 --at fdaee
 bun "$CHECKER_REPO/lib/cli/check.ts" --pr tscircuit/core#5888 --at c9abe2fd452126d1ed34d181c262f8e21d553d18 --checks core/no-new-inflator-components
 ```
 
-`core/require-route-length-input` also runs only in `tscircuit/core` subcircuit inflators. It flags newly added function parameters or inline parameter fields that explicitly accept `SourceBusRouteLength` and make it optional. Omit absent lengths at the caller with `=== undefined` so a value of `0` survives. The rule does not ban optional stored fields, unrelated optional parameters, or return types.
+## Undefined in function signatures
+
+`handbook/review-undefined-signature` is an advisory warning across repositories when added TypeScript function annotations explicitly accept or return `undefined`. It covers direct types, unions, inline parameter object fields, and `Promise<T | undefined>`. It does not flag plain `?` optional parameters, standalone stored-data types, inferred types, or untouched annotation lines. Expected absence (such as a lookup miss) can be correct; prefer a required input when the caller can handle absence, or a distinct error when the operation actually failed.
 
 ## Code-mode API
 
