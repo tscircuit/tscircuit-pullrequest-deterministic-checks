@@ -26,6 +26,7 @@ Recurring comments from ShiboSoftwareDev and seveibar on @0hmX's tscircuit PRs, 
 | `schema/redeclared-shared-shape` | "why redefine point?" (Shibo) | [circuit-json#1051](https://github.com/tscircuit/circuit-json/pull/1051#discussion_r4686538651) |
 | `schema/missing-measurement-unit` | "unit of skew?" (Seve) | [circuit-json#1051](https://github.com/tscircuit/circuit-json/pull/1051#discussion_r4687055859) |
 | `core/no-new-inflator-components` | "do we really need a new component for this?" (Shibo) | [core#5888](https://github.com/tscircuit/core/pull/5888#discussion_r4691041588) |
+| `core/require-route-length-input` | "this should be required so you don't return undefined since it's not a route length" (Shibo) | [core#5888](https://github.com/tscircuit/core/pull/5888#discussion_r4691819133) |
 
 ## Not automatable (judgment)
 

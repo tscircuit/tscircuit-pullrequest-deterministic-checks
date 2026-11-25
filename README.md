@@ -54,6 +54,8 @@ bun "$CHECKER_REPO/lib/cli/check.ts" --pr tscircuit/circuit-json#1051 --at fdaee
 bun "$CHECKER_REPO/lib/cli/check.ts" --pr tscircuit/core#5888 --at c9abe2fd452126d1ed34d181c262f8e21d553d18 --checks core/no-new-inflator-components
 ```
 
+`core/require-route-length-input` also runs only in `tscircuit/core` subcircuit inflators. It flags newly added function parameters or inline parameter fields that explicitly accept `SourceBusRouteLength` and make it optional. Omit absent lengths at the caller with `=== undefined` so a value of `0` survives. The rule does not ban optional stored fields, unrelated optional parameters, or return types.
+
 ## Code-mode API
 
 Import the API from `lib/index.ts` in a clone, or from the package after adding it to a Bun project with `bun add github:tscircuit/tscircuit-pullrequest-deterministic-checks`.
