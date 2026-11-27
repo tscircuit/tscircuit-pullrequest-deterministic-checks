@@ -2,15 +2,17 @@ import ts from "typescript"
 import type { Check, CheckContext, Finding } from "../types"
 import { cached, hashText } from "../utils/cache"
 import { isCheckedCodeFile } from "../utils/line-check-helpers"
+import { listTopLevelFunctionDefinitions } from "../utils/list-top-level-function-definitions"
 
 /** Bump when the AST rules change so cached results are recomputed. */
-const AST_RULES_VERSION = "2"
+const AST_RULES_VERSION = "3"
 
 interface AstViolation {
   checkId:
     | "handbook/two-parameter-rule"
     | "handbook/no-named-closures"
     | "handbook/entrypoint-pollution"
+    | "handbook/one-function-per-file"
   line: number
   /** Last line of the signature: a change anywhere in it counts as touching it */
   signatureEndLine: number
@@ -149,7 +151,6 @@ function findAstViolations(params: {
     params.content,
     ts.ScriptTarget.Latest,
     true,
-    params.filePath.endsWith("x") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
   )
   const ctx: AstWalkContext = {
     filePath: params.filePath,
@@ -157,6 +158,17 @@ function findAstViolations(params: {
     violations: [],
   }
   visitNode(sourceFile, ctx)
+  const definitions = listTopLevelFunctionDefinitions(sourceFile)
+  if (definitions.length > 1) {
+    for (const { node, definition } of definitions) {
+      ctx.violations.push({
+        checkId: "handbook/one-function-per-file",
+        line: getLine(definition, ctx),
+        signatureEndLine: getSignatureEndLine(node, ctx),
+        message: `File defines ${definitions.length} top-level functions; move the extra functions to separate files`,
+      })
+    }
+  }
 
   if (/(^|\/)index\.tsx?$/.test(params.filePath)) {
     const topLevelFunctionCount =
@@ -210,7 +222,11 @@ const astHandbookChecks: Check = {
         filePath: changedFile.filePath,
         content,
       })
+      let reportedFunctionCount = false
       for (const violation of violations) {
+        const isFunctionCountRule =
+          violation.checkId === "handbook/one-function-per-file"
+        if (isFunctionCountRule && reportedFunctionCount) continue
         const isEntrypointRule =
           violation.checkId === "handbook/entrypoint-pollution"
         const touchesSignature = addedLineNumbers.some(
@@ -219,6 +235,7 @@ const astHandbookChecks: Check = {
             lineNumber <= violation.signatureEndLine,
         )
         if (!isEntrypointRule && !touchesSignature) continue
+        if (isFunctionCountRule) reportedFunctionCount = true
         findings.push({
           checkId: violation.checkId,
           level: isEntrypointRule ? "warn" : "error",
@@ -228,7 +245,9 @@ const astHandbookChecks: Check = {
           why:
             violation.checkId === "handbook/entrypoint-pollution"
               ? "tscircuit/handbook: avoid polluting entrypoint files"
-              : 'Shibo: "a three-parameter nested helper, both against handbook guidance"',
+              : isFunctionCountRule
+                ? "Keep top-level function implementations in separate files"
+                : 'Shibo: "a three-parameter nested helper, both against handbook guidance"',
         })
       }
     }
