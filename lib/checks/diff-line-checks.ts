@@ -242,6 +242,38 @@ const reproAsTsx: Check = {
   },
 }
 
+// Git diff paths always use "/" regardless of the local platform.
+const README_PATH_PATTERN =
+  /(^|\/)readme(?:\.(?:md|mdx|markdown|rst|txt|adoc|org))?$/i
+
+const reviewReadmeChange: Check = {
+  checkId: "docs/review-readme-change",
+  group: "diff",
+  async run(ctx) {
+    const findings: Finding[] = []
+    for (const { filePath, previousFilePath, addedLines } of ctx.changedFiles) {
+      const isReadmePath = README_PATH_PATTERN.test(filePath)
+      const wasReadme =
+        previousFilePath !== undefined &&
+        README_PATH_PATTERN.test(previousFilePath)
+      if (!isReadmePath && !wasReadme) continue
+      const subject =
+        wasReadme && !isReadmePath
+          ? `README renamed from ${previousFilePath}`
+          : "README changed"
+      findings.push({
+        checkId: this.checkId,
+        level: "warn",
+        filePath,
+        line: addedLines[0]?.line,
+        message: `${subject}; review the wording, commands and examples before asking for review`,
+        why: "Seve flagged a README change as a sign the author had not reviewed their own PR.",
+      })
+    }
+    return findings
+  },
+}
+
 export const diffLineChecks: Check[] = [
   useCircuitJsonUtil,
   noLocalCircuitJsonTypes,
@@ -251,4 +283,5 @@ export const diffLineChecks: Check[] = [
   commentDensity,
   dependencyChanges,
   reproAsTsx,
+  reviewReadmeChange,
 ]
