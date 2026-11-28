@@ -29,6 +29,7 @@ Recurring comments from ShiboSoftwareDev and seveibar on @0hmX's tscircuit PRs, 
 | `handbook/review-undefined-signature` | "this should be required so you don't return undefined since it's not a route length" (Shibo) | [core#5888](https://github.com/tscircuit/core/pull/5888#discussion_r4691819133) |
 | `docs/review-readme-change` | Seve asked the author to self-review and pointed to the README change. | [pcb-viewer#1234](https://github.com/tscircuit/pcb-viewer/pull/1234#pullrequestreview-6090744804) |
 | `handbook/one-function-per-file` | User-requested blocking rule: keep top-level function implementations in separate files. It only reports when the diff changes a definition or its signature. | General |
+| `correctness/possible-division-by-zero` | "this divides by distance without guarding against zero-length segments" (Shibo) | [pcb-viewer#1234](https://github.com/tscircuit/pcb-viewer/pull/1234#discussion_r4725626111) |
 
 ## Not automatable (judgment)
 
@@ -39,3 +40,13 @@ Recurring comments from ShiboSoftwareDev and seveibar on @0hmX's tscircuit PRs, 
 ## Replay result
 
 `--pr <ref> --at <original_commit_id>` over every comment above: 21/27 automatable comments caught. Misses: 3 where the PR body or title was edited after the review (the replay uses the current body), 2 reference-comparison judgment calls, 1 vague "these comments" remark.
+
+## Division-by-zero warning scope
+
+`correctness/possible-division-by-zero` is advisory. It looks at added division
+or divisor lines in production JS/TS and catches zero literals, lengths and
+collection sizes, common distance/magnitude calls, and local `const` aliases
+of those expressions. Compute the divisor once and use an explicit nonzero
+branch or early exit to show the guard. The rule does not prove that a divisor
+is nonzero, infer what arbitrary functions return, or follow guards in callers
+or other files.

@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 import { astChecks } from "./checks/ast-checks"
+import { divisionByZeroChecks } from "./checks/division-by-zero-checks"
 import { coreInflatorChecks } from "./checks/core-inflator-checks"
 import { undefinedSignatureChecks } from "./checks/undefined-signature-checks"
 import { measurementUnitChecks } from "./checks/measurement-unit-checks"
@@ -29,6 +30,7 @@ export const allChecks: Check[] = [
   ...diffLineChecks,
   ...packageJsonChecks,
   ...astChecks,
+  ...divisionByZeroChecks,
   ...coreInflatorChecks,
   ...undefinedSignatureChecks,
   ...sharedShapeChecks,
