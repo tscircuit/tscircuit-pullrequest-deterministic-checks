@@ -10,7 +10,56 @@ export function conditionProvesNonzero(params: {
   checker: ts.TypeChecker
 }): boolean {
   const condition = unwrapNumericExpression(params.condition)
+
+  if (
+    ts.isPrefixUnaryExpression(condition) &&
+    condition.operator === ts.SyntaxKind.ExclamationToken
+  ) {
+    return conditionProvesNonzero({
+      ...params,
+      condition: condition.operand,
+      whenTrue: !params.whenTrue,
+    })
+  }
+
+  if (ts.isIdentifier(condition)) {
+    return (
+      params.whenTrue &&
+      getConstDeclaration({ node: condition, checker: params.checker }) ===
+        params.declaration
+    )
+  }
+
   if (!ts.isBinaryExpression(condition)) return false
+
+  const operator = condition.operatorToken.kind
+  if (operator === ts.SyntaxKind.AmpersandAmpersandToken) {
+    const leftProves = conditionProvesNonzero({
+      ...params,
+      condition: condition.left,
+    })
+    const rightProves = conditionProvesNonzero({
+      ...params,
+      condition: condition.right,
+    })
+    return params.whenTrue
+      ? leftProves || rightProves
+      : leftProves && rightProves
+  }
+  if (operator === ts.SyntaxKind.BarBarToken) {
+    const leftProves = conditionProvesNonzero({
+      ...params,
+      condition: condition.left,
+    })
+    const rightProves = conditionProvesNonzero({
+      ...params,
+      condition: condition.right,
+    })
+    return params.whenTrue
+      ? leftProves && rightProves
+      : leftProves || rightProves
+  }
+
   const left = unwrapNumericExpression(condition.left)
   const right = unwrapNumericExpression(condition.right)
   const zeroOnLeft = isZeroLiteral(left)
@@ -25,7 +74,7 @@ export function conditionProvesNonzero(params: {
   }
   // Either strict inequality excludes zero when true. Its inclusive counterpart
   // excludes zero when false, regardless of which side the zero is written on.
-  switch (condition.operatorToken.kind) {
+  switch (operator) {
     case ts.SyntaxKind.ExclamationEqualsEqualsToken:
     case ts.SyntaxKind.GreaterThanToken:
     case ts.SyntaxKind.LessThanToken:

@@ -47,6 +47,25 @@ test("warns on added zero-capable divisors but respects guards on the same const
       warnings: 0,
     },
     {
+      expression:
+        "const d = Math.hypot(dx, dy); for (;;) { if (d <= 0 || d <= 1e-9) continue; return 4 / d }",
+      warnings: 0,
+    },
+    {
+      expression:
+        "const d = distance(start, end); if (d > 0 && isReady) { return 4 / d }",
+      warnings: 0,
+    },
+    {
+      expression: "const d = xs.length; if (!d) return null; return 4 / d",
+      warnings: 0,
+    },
+    {
+      expression:
+        "const d = xs.length; if (!(d > 0)) return null; return 4 / d",
+      warnings: 0,
+    },
+    {
       expression: "const d = xs.length; if (d >= 0) return 4 / d",
       warnings: 1,
     },
@@ -70,6 +89,20 @@ test("warns on added zero-capable divisors but respects guards on the same const
     },
     {
       expression: "const d = xs.length; const n = 4; if (n > 0) return 4 / d",
+      warnings: 1,
+    },
+    {
+      expression:
+        "const d = xs.length; if (d === 0 && otherCheck) return null; return 4 / d",
+      warnings: 1,
+    },
+    {
+      expression:
+        "const d = xs.length; if (d > 0 || otherCheck) return 4 / d; return 0",
+      warnings: 1,
+    },
+    {
+      expression: "const d = xs.length; if (!d) return 4 / d; return 0",
       warnings: 1,
     },
   ]) {
