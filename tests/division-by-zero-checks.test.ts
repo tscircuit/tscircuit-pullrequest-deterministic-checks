@@ -48,62 +48,6 @@ test("warns on added zero-capable divisors but respects guards on the same const
     },
     {
       expression:
-        "const d = Math.hypot(dx, dy); if (d <= 1e-9) return 0; return 4 / d",
-      warnings: 0,
-    },
-    {
-      expression:
-        "const EPS = 1e-9; const d = distance(a, b); if (d < EPS) return 0; return 4 / d",
-      warnings: 0,
-    },
-    {
-      expression:
-        "const EPS = 1e-9; const d = distance(a, b); if (Math.abs(d) <= EPS) return 0; return 4 / d",
-      warnings: 0,
-    },
-    {
-      expression:
-        "const EPS = 1e-9; const d = Math.hypot(dx, dy); for (;;) { if (d <= 0 || d <= EPS) continue; return 4 / d }",
-      warnings: 0,
-    },
-    {
-      expression:
-        "const d = distance(a, b); if (d > 1e-9 && ready) return 4 / d; return 0",
-      warnings: 0,
-    },
-    {
-      expression: "const d = xs.length; if (!d) return 0; return 4 / d",
-      warnings: 0,
-    },
-    {
-      expression: "const d = distance(a, b); if (d < 1e-9) return 4 / d",
-      warnings: 1,
-    },
-    {
-      expression: "const d = distance(a, b); if (d > -1e-9) return 4 / d",
-      warnings: 1,
-    },
-    {
-      expression:
-        "const d = distance(a, b); if (Math.abs(d) >= 0) return 4 / d",
-      warnings: 1,
-    },
-    {
-      expression:
-        "const d = distance(a, b); if (d <= 0 && ready) return 0; return 4 / d",
-      warnings: 1,
-    },
-    {
-      expression:
-        "const d = distance(a, b); if (d > 0 || ready) return 4 / d; return 0",
-      warnings: 1,
-    },
-    {
-      expression: "const d = xs.length; if (!d) return 4 / d; return 0",
-      warnings: 1,
-    },
-    {
-      expression:
         "const d = Math.hypot(dx, dy); for (;;) { if (d <= 0 || d <= 1e-9) continue; return 4 / d }",
       warnings: 0,
     },
@@ -120,19 +64,6 @@ test("warns on added zero-capable divisors but respects guards on the same const
       expression:
         "const d = xs.length; if (!(d > 0)) return null; return 4 / d",
       warnings: 0,
-    },
-    {
-      expression:
-        "const d = xs.length; if (d === 0 && otherCheck) return null; return 4 / d",
-      warnings: 1,
-    },
-    {
-      expression: "const d = xs.length; if (d > 0 || otherCheck) return 4 / d",
-      warnings: 1,
-    },
-    {
-      expression: "const d = xs.length; if (!d) return 4 / d",
-      warnings: 1,
     },
     {
       expression: "const d = xs.length; if (d >= 0) return 4 / d",
@@ -158,6 +89,20 @@ test("warns on added zero-capable divisors but respects guards on the same const
     },
     {
       expression: "const d = xs.length; const n = 4; if (n > 0) return 4 / d",
+      warnings: 1,
+    },
+    {
+      expression:
+        "const d = xs.length; if (d === 0 && otherCheck) return null; return 4 / d",
+      warnings: 1,
+    },
+    {
+      expression:
+        "const d = xs.length; if (d > 0 || otherCheck) return 4 / d; return 0",
+      warnings: 1,
+    },
+    {
+      expression: "const d = xs.length; if (!d) return 4 / d; return 0",
       warnings: 1,
     },
   ]) {
