@@ -1,4 +1,5 @@
 import type { ChangedFile, Check, CheckContext, Finding } from "../types"
+import { scanLineSegments } from "./scan-line-segments"
 
 const CODE_FILE_PATTERN = /\.(ts|tsx|js|jsx|mts|cts)$/
 const IGNORED_PATH_PATTERN =
@@ -20,12 +21,12 @@ export function getCodeChanges(ctx: CheckContext): ChangedFile[] {
 }
 
 export function isCommentLine(text: string): boolean {
-  return /^\s*(\/\/|\/\*|\*(?!\*)|\*\/)/.test(text)
+  return scanLineSegments(text).isPureComment
 }
 
 /** Strip string literals and line comments so patterns only hit code. */
 export function getCodeOnly(text: string): string {
-  return text.replace(/(["'`])(?:\\.|(?!\1).)*\1/g, '""').replace(/\/\/.*$/, "")
+  return scanLineSegments(text).codeOnly
 }
 
 export function createLinePatternCheck(params: {
@@ -48,11 +49,15 @@ export function createLinePatternCheck(params: {
         if (params.appliesToFile && !params.appliesToFile(changedFile.filePath))
           continue
         for (const addedLine of changedFile.addedLines) {
-          const isComment = isCommentLine(addedLine.text)
-          if (matchOn === "code" && isComment) continue
-          if (matchOn === "comments" && !isComment) continue
+          const segments = scanLineSegments(addedLine.text)
+          if (matchOn === "code" && segments.isPureComment) continue
+          if (matchOn === "comments" && segments.commentsOnly === "") continue
           const searchedText =
-            matchOn === "code" ? getCodeOnly(addedLine.text) : addedLine.text
+            matchOn === "code"
+              ? segments.codeOnly
+              : matchOn === "comments"
+                ? segments.commentsOnly
+                : addedLine.text
           if (params.pattern.test(searchedText)) {
             findings.push({
               checkId: params.checkId,
